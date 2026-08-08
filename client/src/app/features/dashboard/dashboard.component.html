@@ -252,9 +252,9 @@
           @for (crypto of restCryptos; track crypto.id) {
             <div class="card">
               <div class="flex items-start justify-between mb-4">
-                <span class="text-[11px] font-medium text-slate-600 uppercase tracking-widest">{{
-                  crypto.symbol
-                }}</span>
+                <span class="text-[11px] font-medium text-slate-600 uppercase tracking-widest">
+                  {{ getCryptoLabel(crypto.symbol) }}
+                </span>
                 <span class="badge" [class]="crypto.changePercent >= 0 ? 'badge-gain' : 'badge-loss'">
                   {{ crypto.changePercent >= 0 ? "↑" : "↓" }}&nbsp;{{
                     (crypto.changePercent < 0 ? -crypto.changePercent : crypto.changePercent) | number: "1.1-1"
@@ -298,7 +298,10 @@
               }
               @for (crypto of restCryptos; track crypto.id) {
                 <tr class="table-row">
-                  <td class="py-3 text-white font-medium">{{ crypto.symbol }}</td>
+                  <td class="py-3 text-white font-medium">
+                    {{ getCryptoLabel(crypto.symbol) }}
+                    <span class="text-slate-600 text-[11px] ml-1">{{ crypto.symbol }}</span>
+                  </td>
                   <td class="py-3 text-right text-slate-400" colspan="1">
                     USD {{ crypto.priceUsd | number: "1.0-0" }}
                   </td>

@@ -50,6 +50,11 @@ const RATE_CHART_COLORS: Record<string, string> = {
 
 const CRYPTO_HISTORY_TYPES = ['BTC', 'ETH'];
 
+const CRYPTO_LABELS: Record<string, string> = {
+  BTC: 'Bitcoin',
+  ETH: 'Ethereum',
+};
+
 const VIEW_MODE_KEY = 'dolarenvivo-view-mode';
 
 // How old the prerendered/transfer-cached snapshot can be before we hide it
@@ -267,6 +272,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getRateLabel(type: string): string {
     return RATE_LABELS[type] ?? type;
+  }
+
+  getCryptoLabel(symbol: string): string {
+    return CRYPTO_LABELS[symbol.toUpperCase()] ?? symbol;
   }
 
   isFresh(lastFetched: string | null): boolean {
