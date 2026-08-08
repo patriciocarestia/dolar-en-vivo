@@ -1,12 +1,7 @@
 /**
- * Programmatic conversion pages: /convertir/{amount}-dolares-a-pesos and
- * /convertir/{amount}-pesos-a-dolares.
- *
- * The amount lists are deliberately finite and hand-picked around round
- * figures people actually type into a search box. Accepting arbitrary amounts
- * would open an unbounded URL space, which wastes crawl budget and produces
- * near-identical pages Google treats as thin content — so anything outside
- * these lists is handled by the interactive converter instead of its own URL.
+ * Amounts that get their own conversion page. Kept finite on purpose:
+ * arbitrary amounts would open an unbounded URL space of near-identical
+ * pages, so anything outside these lists uses the interactive converter.
  */
 
 export type ConversionDirection = 'usd-to-ars' | 'ars-to-usd';

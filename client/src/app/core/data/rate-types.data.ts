@@ -1,11 +1,6 @@
 /**
- * Editorial content for the per-rate landing pages.
- *
- * Each entry carries the copy that makes its page worth indexing on its own:
- * what the rate is, how it's actually bought, its legal/tax treatment and who
- * uses it. The dashboard only ever shows the number, so none of this prose is
- * duplicated there — the pages compete for "dólar mep", "dólar ccl", etc.,
- * which are far less contested than the generic "dólar blue hoy".
+ * Editorial content for the per-rate landing pages. The dashboard only shows
+ * the number, so none of this prose is duplicated there.
  */
 
 export interface RateFaq {

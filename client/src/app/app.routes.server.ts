@@ -3,11 +3,9 @@ import { RATE_TYPES } from './core/data/rate-types.data';
 import { CONVERSION_ROUTES } from './core/data/conversion.data';
 
 /**
- * Everything that exists to be found in search is prerendered: these pages are
- * built from content we ship, so a crawler gets real HTML on the first request
- * without waiting on the render queue. The authenticated sections stay
- * client-rendered — their auth guard reads localStorage, which doesn't exist
- * during prerendering, and they're excluded from indexing anyway.
+ * Indexable pages are prerendered so crawlers get real HTML on the first
+ * request. The authenticated sections stay client-rendered: their guard reads
+ * localStorage, which doesn't exist at build time.
  */
 export const serverRoutes: ServerRoute[] = [
   {

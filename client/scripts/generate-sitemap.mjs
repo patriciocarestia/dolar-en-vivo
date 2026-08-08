@@ -1,11 +1,6 @@
 /**
- * Builds sitemap.xml from the pages the prerender actually emitted.
- *
- * Deriving it from the build output rather than a hand-kept list means the
- * sitemap can't drift: a page that failed to prerender never gets advertised,
- * and a new route shows up the moment it builds.
- *
- * Runs after `ng build` (see the `build` script in package.json).
+ * Builds sitemap.xml from the pages the prerender actually emitted, so it
+ * can't drift from the routing table. Runs after `ng build`.
  */
 import { readdir, writeFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';

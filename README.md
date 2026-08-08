@@ -42,6 +42,47 @@ Argentina has multiple parallel exchange rates (Oficial, Blue, MEP, CCL, Cripto)
 - **Portfolio tracker** — add positions in any asset type with purchase price and date
 - **AI analysis** — Gemini 2.5 Flash analyzes your portfolio in Spanish, comparing returns vs inflation and USD Blue
 - **JWT authentication** — secure per-user portfolio data
+- **Plazo fijo vs dólar calculator** — compares a fixed-term deposit against the real blue-dollar series over the same window
+- **37 prerendered pages** — per-rate guides, programmatic conversion pages and historical tables, built for organic search
+
+---
+
+## Running locally
+
+**Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download), [Node.js 20+](https://nodejs.org/)
+
+```bash
+git clone https://github.com/patriciocarestia/dolar-en-vivo.git
+cd dolar-en-vivo
+```
+
+**Backend** — starts on `http://localhost:5255`:
+
+```bash
+cd src/DolarEnVivo.API
+cp appsettings.Development.example.json appsettings.Development.json
+dotnet run
+```
+
+The database is created automatically on first run and the rate fetcher seeds
+historical data from DolarAPI, so the dashboard has data immediately. The AI
+analysis endpoint needs a [Gemini API key](https://aistudio.google.com/apikey)
+in `appsettings.Development.json`; every other feature works without one.
+
+**Frontend** — starts on `http://localhost:4200`:
+
+```bash
+cd client
+npm install
+npm start
+```
+
+**Tests:**
+
+```bash
+dotnet test dolar-en-vivo.sln   # backend
+cd client && npm test           # frontend
+```
 
 ---
 
@@ -55,6 +96,7 @@ Argentina has multiple parallel exchange rates (Oficial, Blue, MEP, CCL, Cripto)
 | AI       | Google Gemini 2.5 Flash                                       |
 | Jobs     | Hangfire (in-process scheduled jobs)                          |
 | Auth     | JWT Bearer tokens                                             |
+| Testing  | xUnit + Moq (backend), Jest (frontend)                        |
 | CI/CD    | GitHub Actions                                                |
 | Hosting  | Azure Static Web Apps + Azure App Service F1                  |
 
@@ -109,18 +151,37 @@ Argentina has multiple parallel exchange rates (Oficial, Blue, MEP, CCL, Cripto)
 ```
 dolar-en-vivo/
 ├── src/
-│   ├── DolarEnVivo.API/
-│   ├── DolarEnVivo.Application/
-│   ├── DolarEnVivo.Domain/
-│   ├── DolarEnVivo.Infrastructure/
+│   ├── DolarEnVivo.API/             # Controllers, middleware, DI composition
+│   ├── DolarEnVivo.Application/     # Use cases: commands, queries, handlers
+│   ├── DolarEnVivo.Domain/          # Entities, no external dependencies
+│   ├── DolarEnVivo.Infrastructure/  # EF Core, repositories, external APIs
 │   └── DolarEnVivo.Tests/
-└── client/                      # Angular 21 SPA
+└── client/                          # Angular 21 SPA
+    ├── scripts/                     # sitemap generation (post-build)
     └── src/app/
-        ├── core/
-        ├── features/
-        ├── shared/
-        └── store/
+        ├── core/                    # services, guards, interceptors, page content
+        ├── features/                # routed pages, lazily loaded
+        ├── shared/                  # reusable components
+        └── store/                   # NgRx feature stores
 ```
+
+---
+
+## Rendering strategy
+
+Pages are prerendered per route rather than served as a single client-rendered
+bundle, since organic search is the main acquisition channel:
+
+| Route | Mode | Why |
+|-------|------|-----|
+| `/`, `/dolar-*`, `/convertir/*`, `/historico/*` | Prerender (SSG) | Crawlers get real HTML on first request instead of waiting on the render queue |
+| `/portfolio`, `/analysis` | Client | Behind an auth guard that reads `localStorage`, which doesn't exist at build time |
+
+Prerendered rate data is a build-time snapshot, so the dashboard refetches
+shortly after hydration and self-corrects rather than showing a stale number.
+
+`sitemap.xml` is generated from the prerender output after each build, so it
+lists exactly the pages that exist and can't drift from the routing table.
 
 ---
 

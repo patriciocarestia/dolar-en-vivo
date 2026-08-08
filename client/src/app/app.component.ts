@@ -9,7 +9,7 @@ import {
   RouterLink,
   RouterOutlet,
 } from '@angular/router';
-import { filter, map } from 'rxjs';
+import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
 import { SeoService } from './core/services/seo.service';
@@ -17,16 +17,16 @@ import { AnalyticsService } from './core/services/analytics.service';
 import { environment } from '../environments/environment';
 import { RATE_TYPES } from './core/data/rate-types.data';
 
+const DEFAULT_TITLE = 'Dólar en Vivo';
+const DEFAULT_DESCRIPTION = 'Cotización del dólar y criptomonedas en Argentina hoy, en vivo.';
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, NavbarComponent, RouterLink],
   templateUrl: './app.component.html',
 })
 export class AppComponent implements OnInit {
-  /**
-   * Site-wide links in the footer. Present on every page, so each rate guide
-   * and tool stays one hop from anywhere a crawler lands.
-   */
+  /** Keeps every guide one hop from any page a crawler lands on. */
   readonly footerLinks = [
     ...RATE_TYPES.map((type) => ({ path: `/${type.slug}`, label: type.label })),
     { path: '/brecha-cambiaria', label: 'Brecha cambiaria' },
@@ -42,12 +42,6 @@ export class AppComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly viewportScroller = inject(ViewportScroller);
 
-  /**
-   * Scroll offset per URL, so back/forward returns where the user left off.
-   * Router-level restoration doesn't hold up here: these routes are lazy and
-   * fetch their data after navigation settles, so any scroll applied at
-   * NavigationEnd lands on a page that hasn't reached full height yet.
-   */
   private readonly scrollPositions = new Map<string, number>();
   private restoringHistoryPosition = false;
 
@@ -69,52 +63,52 @@ export class AppComponent implements OnInit {
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(() => {
-        const target = this.restoringHistoryPosition
-          ? (this.scrollPositions.get(this.router.url) ?? 0)
-          : 0;
-        this.scrollToWhenTallEnough(target);
-      });
+      .subscribe(() => this.onNavigationEnd());
+  }
 
-    this.router.events
-      .pipe(
-        filter((event) => event instanceof NavigationEnd),
-        map(() => {
-          let route = this.activatedRoute;
-          while (route.firstChild) route = route.firstChild;
-          return route.snapshot;
-        }),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe((snapshot) => {
-        const title = (snapshot.data['title'] as string) ?? 'Dólar en Vivo';
-        const description =
-          (snapshot.data['description'] as string) ??
-          'Cotización del dólar y criptomonedas en Argentina hoy, en vivo.';
+  private onNavigationEnd(): void {
+    this.restoreScroll();
 
-        // Routes whose metadata depends on their params (a rate slug, a
-        // conversion amount) set it from the component itself. Writing the
-        // generic fallback here too would race with — and usually clobber —
-        // the specific one the component just published.
-        if (!snapshot.data['dynamicSeo']) {
-          this.seo.update({ title, description, path: this.router.url });
-        }
-        this.analytics.trackPageView(this.router.url, title);
+    const snapshot = this.deepestActivatedRoute().snapshot;
+    const title = (snapshot.data['title'] as string) ?? DEFAULT_TITLE;
+
+    // Routes whose metadata depends on their params publish it themselves;
+    // writing the generic fallback here would clobber the specific one.
+    if (!snapshot.data['dynamicSeo']) {
+      this.seo.update({
+        title,
+        description: (snapshot.data['description'] as string) ?? DEFAULT_DESCRIPTION,
+        path: this.router.url,
       });
+    }
+
+    this.analytics.trackPageView(this.router.url, title);
+  }
+
+  private deepestActivatedRoute() {
+    let route = this.activatedRoute;
+    while (route.firstChild) route = route.firstChild;
+    return route;
+  }
+
+  private restoreScroll(): void {
+    const target = this.restoringHistoryPosition
+      ? (this.scrollPositions.get(this.router.url) ?? 0)
+      : 0;
+    this.scrollTo(target);
   }
 
   /**
-   * Applies a scroll offset, retrying briefly while the page is still short.
-   * Rate and history pages render their tables and charts once their request
-   * resolves, so an immediate scroll to a deep offset would be clamped to the
-   * current (smaller) height and silently land in the wrong place.
+   * Retries while the page is still short: routed pages render their tables and
+   * charts once their request resolves, so an immediate scroll to a deep offset
+   * would be clamped to the current height and land in the wrong place.
    */
-  private scrollToWhenTallEnough(target: number, attempt = 0): void {
+  private scrollTo(target: number, attempt = 0): void {
     this.viewportScroller.scrollToPosition([0, target]);
 
     if (typeof window === 'undefined' || target === 0 || attempt >= 5) return;
     if (Math.abs(this.viewportScroller.getScrollPosition()[1] - target) < 2) return;
 
-    setTimeout(() => this.scrollToWhenTallEnough(target, attempt + 1), 100);
+    setTimeout(() => this.scrollTo(target, attempt + 1), 100);
   }
 }
