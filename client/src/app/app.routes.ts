@@ -1,5 +1,20 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { RATE_TYPES } from './core/data/rate-types.data';
+
+/**
+ * One route per rate type, generated from the same content source the pages
+ * render. Declaring them explicitly (rather than a root-level `:slug`) keeps
+ * the root path free for the real sections below instead of swallowing them.
+ */
+const rateDetailRoutes: Routes = RATE_TYPES.map((type) => ({
+  path: type.slug,
+  loadComponent: () =>
+    import('./features/rate-detail/rate-detail.component').then((m) => m.RateDetailComponent),
+  // The slug travels in `data` rather than as a route param: these are static
+  // paths, so there is no param for the component to read.
+  data: { dynamicSeo: true, title: type.metaTitle, slug: type.slug },
+}));
 
 export const routes: Routes = [
   {
@@ -17,6 +32,48 @@ export const routes: Routes = [
     redirectTo: '',
     pathMatch: 'full',
   },
+
+  ...rateDetailRoutes,
+
+  {
+    path: 'brecha-cambiaria',
+    loadComponent: () =>
+      import('./features/brecha/brecha.component').then((m) => m.BrechaComponent),
+    data: {
+      dynamicSeo: true,
+      title: 'Brecha Cambiaria Hoy: Dólar Blue vs Oficial | Dólar en Vivo',
+    },
+  },
+  {
+    path: 'calculadora/plazo-fijo-vs-dolar',
+    loadComponent: () =>
+      import('./features/calculadoras/plazo-fijo.component').then(
+        (m) => m.PlazoFijoCalculatorComponent,
+      ),
+    data: {
+      dynamicSeo: true,
+      title: 'Plazo Fijo vs Dólar: Calculadora Comparativa | Dólar en Vivo',
+    },
+  },
+  {
+    path: 'convertir',
+    loadComponent: () =>
+      import('./features/convert/convert-hub.component').then((m) => m.ConvertHubComponent),
+    data: { dynamicSeo: true, title: 'Conversor de Dólares a Pesos Argentinos | Dólar en Vivo' },
+  },
+  {
+    path: 'convertir/:slug',
+    loadComponent: () =>
+      import('./features/convert/convert.component').then((m) => m.ConvertComponent),
+    data: { dynamicSeo: true, title: 'Conversor | Dólar en Vivo' },
+  },
+  {
+    path: 'historico/:slug',
+    loadComponent: () =>
+      import('./features/historico/historico.component').then((m) => m.HistoricoComponent),
+    data: { dynamicSeo: true, title: 'Histórico del dólar | Dólar en Vivo' },
+  },
+
   {
     path: 'portfolio',
     loadComponent: () =>

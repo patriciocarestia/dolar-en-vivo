@@ -1,0 +1,151 @@
+@let conv = conversion();
+@let usdToArs = isUsdToArs();
+@let headline = headlineRow();
+
+<div class="space-y-8">
+  <nav class="flex items-center gap-2 text-xs text-slate-600" aria-label="Migas de pan">
+    <a routerLink="/" class="hover:text-slate-400 transition-colors">Cotizaciones</a>
+    <span aria-hidden="true">›</span>
+    <a routerLink="/convertir" class="hover:text-slate-400 transition-colors">Conversor</a>
+    <span aria-hidden="true">›</span>
+    <span class="text-slate-500"> {{ conv.amount | number: "1.0-0" }} {{ usdToArs ? "USD a ARS" : "ARS a USD" }} </span>
+  </nav>
+
+  <div>
+    <h1 class="page-title">{{ heading() }}</h1>
+    <p class="page-subtitle">Convertido con cotizaciones actualizadas en vivo</p>
+  </div>
+
+  <section class="card card-hero card-hero-blue">
+    @if (headline) {
+      <p class="stat-label">
+        {{ activeAmount() | number: "1.0-2" }} {{ usdToArs ? "dólares" : "pesos" }} al {{ headline.lowerLabel }}
+      </p>
+      <div class="hero-value">
+        {{ usdToArs ? "$" : "US$" }}{{ headline.result | number: (usdToArs ? "1.0-0" : "1.2-2") }}
+      </div>
+      <p class="text-[11px] text-slate-600 mt-3">Calculado a ${{ headline.rate | number: "1.0-0" }} por dólar</p>
+    } @else {
+      <div class="animate-pulse space-y-4">
+        <div class="skeleton h-2 w-[40%]"></div>
+        <div class="skeleton h-10 w-[65%]"></div>
+      </div>
+    }
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h2>Según cada tipo de dólar</h2>
+      <div class="section-divider"></div>
+    </div>
+    <p class="text-sm text-slate-400 leading-relaxed mb-5">
+      En Argentina conviven varios tipos de cambio, así que la respuesta cambia según cuál uses. Esta es la conversión
+      de {{ activeAmount() | number: "1.0-2" }} {{ usdToArs ? "dólares" : "pesos" }} con cada cotización vigente.
+    </p>
+
+    @if (rows().length > 0) {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="table-divider">
+              <th class="th text-left">Tipo de cambio</th>
+              <th class="th text-right">Cotización</th>
+              <th class="th text-right">Equivale a</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.slug) {
+              <tr class="table-row">
+                <td class="py-3">
+                  <a [routerLink]="['/', row.slug]" class="text-white font-medium hover:text-sky-400 transition-colors">
+                    {{ row.label }}
+                  </a>
+                </td>
+                <td class="py-3 text-right text-slate-400">${{ row.rate | number: "1.0-0" }}</td>
+                <td class="py-3 text-right text-white font-medium">
+                  {{ usdToArs ? "$" : "US$" }}{{ row.result | number: (usdToArs ? "1.0-0" : "1.2-2") }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="animate-pulse space-y-3">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <div class="skeleton h-8"></div>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h2>Convertir otro monto</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="flex-1 min-w-[160px]">
+        <label class="label" for="custom-amount">{{ usdToArs ? "Dólares (USD)" : "Pesos (ARS)" }}</label>
+        <input
+          id="custom-amount"
+          type="number"
+          class="input"
+          [value]="activeAmount()"
+          (input)="setCustomAmount($any($event.target).value)"
+          min="0"
+        />
+      </div>
+      @if (headline) {
+        <div class="flex-1 min-w-[160px]">
+          <p class="label">{{ usdToArs ? "Resultado en ARS" : "Resultado en USD" }}</p>
+          <p class="hero-value !text-2xl" aria-live="polite">
+            {{ usdToArs ? "$" : "US$" }}{{ headline.result | number: (usdToArs ? "1.0-0" : "1.2-2") }}
+          </p>
+        </div>
+      }
+    </div>
+    <p class="text-[11px] text-slate-600 mt-4 leading-relaxed">
+      El resultado usa el {{ headline ? headline.lowerLabel : "dólar blue" }} como referencia. La tabla de arriba se
+      actualiza con el monto que ingreses.
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h2>Por qué el resultado cambia según el tipo de dólar</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="space-y-4 text-sm text-slate-400 leading-relaxed">
+      <p>
+        Argentina tiene un mercado cambiario segmentado: el dólar oficial está regulado por el Banco Central y su acceso
+        es limitado, mientras que el blue, el MEP, el CCL y el cripto surgen de circuitos distintos, cada uno con su
+        propio precio.
+      </p>
+      <p>
+        Por eso una misma cantidad de {{ usdToArs ? "dólares" : "pesos" }} puede equivaler a montos bastante diferentes.
+        Si vas a hacer la operación de verdad, lo relevante es a qué tipo de cambio podés acceder: no sirve calcular al
+        oficial si en la práctica vas a operar al MEP.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <h2>Otras conversiones</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      @for (item of related(); track item.slug) {
+        <a [routerLink]="['/convertir', item.slug]" class="day-pill hover:text-white transition-colors">
+          {{ item.amount | number: "1.0-0" }} {{ item.direction === "usd-to-ars" ? "USD" : "ARS" }}
+        </a>
+      }
+      @if (oppositeDirection(); as opposite) {
+        <a [routerLink]="['/convertir', opposite.slug]" class="day-pill hover:text-white transition-colors">
+          ⇄ {{ opposite.amount | number: "1.0-0" }} {{ opposite.direction === "usd-to-ars" ? "USD" : "ARS" }}
+        </a>
+      }
+    </div>
+  </section>
+</div>

@@ -1,0 +1,143 @@
+@let c = content();
+
+<div class="space-y-8">
+  <nav class="flex items-center gap-2 text-xs text-slate-600" aria-label="Migas de pan">
+    <a routerLink="/" class="hover:text-slate-400 transition-colors">Cotizaciones</a>
+    <span aria-hidden="true">›</span>
+    <a [routerLink]="['/', c.slug]" class="hover:text-slate-400 transition-colors">{{ c.label }}</a>
+    <span aria-hidden="true">›</span>
+    <span class="text-slate-500">Histórico</span>
+  </nav>
+
+  <div>
+    <h1 class="page-title">Histórico del {{ c.lowerLabel }}</h1>
+    <p class="page-subtitle">Cotización día por día, máximos, mínimos y variación mensual</p>
+  </div>
+
+  @if (periodSummary(); as summary) {
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="card">
+        <p class="stat-label">Máximo del período</p>
+        <p class="stat-value">${{ summary.max | number: "1.0-0" }}</p>
+      </div>
+      <div class="card">
+        <p class="stat-label">Mínimo del período</p>
+        <p class="stat-value">${{ summary.min | number: "1.0-0" }}</p>
+      </div>
+      <div class="card">
+        <p class="stat-label">Variación</p>
+        <p class="stat-value" [class]="summary.changePercent >= 0 ? 'gain' : 'loss'">
+          {{ summary.changePercent >= 0 ? "+" : "" }}{{ summary.changePercent | number: "1.1-1" }}%
+        </p>
+      </div>
+      <div class="card">
+        <p class="stat-label">Días registrados</p>
+        <p class="stat-value">{{ summary.days }}</p>
+      </div>
+    </section>
+  }
+
+  @if (loading()) {
+    <div class="card animate-pulse space-y-3">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="skeleton h-8"></div>
+      }
+    </div>
+  } @else {
+    @if (months().length > 0) {
+      <section class="card">
+        <div class="section-header">
+          <h2>Resumen por mes</h2>
+          <div class="section-divider"></div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="table-divider">
+                <th class="th text-left">Mes</th>
+                <th class="th text-right">Apertura</th>
+                <th class="th text-right">Cierre</th>
+                <th class="th text-right">Mínimo</th>
+                <th class="th text-right">Máximo</th>
+                <th class="th text-right">Var.</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (month of months(); track month.key) {
+                <tr class="table-row">
+                  <td class="py-3 text-white font-medium whitespace-nowrap">{{ month.label }}</td>
+                  <td class="py-3 text-right text-slate-400">${{ month.open | number: "1.0-0" }}</td>
+                  <td class="py-3 text-right text-slate-400">${{ month.close | number: "1.0-0" }}</td>
+                  <td class="py-3 text-right text-slate-400">${{ month.min | number: "1.0-0" }}</td>
+                  <td class="py-3 text-right text-slate-400">${{ month.max | number: "1.0-0" }}</td>
+                  <td class="py-3 text-right">
+                    <span class="badge" [class]="month.changePercent >= 0 ? 'badge-gain' : 'badge-loss'">
+                      {{ month.changePercent >= 0 ? "↑" : "↓" }}&nbsp;{{
+                        (month.changePercent < 0 ? -month.changePercent : month.changePercent) | number: "1.1-1"
+                      }}%
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (recentDays().length > 0) {
+      <section class="card">
+        <div class="section-header">
+          <h2>Cotización día por día</h2>
+          <div class="section-divider"></div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="table-divider">
+                <th class="th text-left">Fecha</th>
+                <th class="th text-right">Compra</th>
+                <th class="th text-right">Venta</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (day of recentDays(); track day.label) {
+                <tr class="table-row">
+                  <td class="py-3 text-white font-medium whitespace-nowrap">{{ day.label }}</td>
+                  <td class="py-3 text-right text-slate-400">${{ day.buy | number: "1.0-0" }}</td>
+                  <td class="py-3 text-right text-slate-400">${{ day.sell | number: "1.0-0" }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+
+  <section class="card">
+    <div class="section-header">
+      <h2>Sobre estos datos</h2>
+      <div class="section-divider"></div>
+    </div>
+    <p class="text-sm text-slate-400 leading-relaxed">
+      Los valores corresponden a la cotización de cierre de cada día registrada por Dólar en Vivo. Los fines de semana y
+      feriados el mercado no opera, por lo que esos días pueden no figurar o repetir el último valor. El resumen mensual
+      toma la apertura y el cierre del primer y último día con registro de cada mes.
+    </p>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <h2>Histórico de otras cotizaciones</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      @for (type of otherTypes(); track type.slug) {
+        <a [routerLink]="['/historico', type.slug]" class="day-pill hover:text-white transition-colors">
+          {{ type.label }}
+        </a>
+      }
+    </div>
+  </section>
+</div>

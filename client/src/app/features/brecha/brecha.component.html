@@ -1,0 +1,167 @@
+<div class="space-y-8">
+  <nav class="flex items-center gap-2 text-xs text-slate-600" aria-label="Migas de pan">
+    <a routerLink="/" class="hover:text-slate-400 transition-colors">Cotizaciones</a>
+    <span aria-hidden="true">›</span>
+    <span class="text-slate-500">Brecha cambiaria</span>
+  </nav>
+
+  <div>
+    <h1 class="page-title">Brecha cambiaria hoy</h1>
+    <p class="page-subtitle">Cuánto más caro está el dólar paralelo frente al oficial</p>
+  </div>
+
+  <section class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="card card-hero card-hero-blue sm:col-span-2">
+      <p class="stat-label">Brecha del blue con el oficial</p>
+      @if (blueGap(); as gap) {
+        <div class="hero-value">{{ gap | number: "1.1-1" }}%</div>
+        @if (oficial(); as oficial) {
+          <p class="text-[11px] text-slate-600 mt-3">
+            Dólar oficial ${{ oficial.sell | number: "1.0-0" }} · calculado sobre el precio de venta
+          </p>
+        }
+      } @else {
+        <div class="animate-pulse space-y-3">
+          <div class="skeleton h-10 w-[45%]"></div>
+          <div class="skeleton h-2 w-[60%]"></div>
+        </div>
+      }
+    </div>
+
+    <div class="card flex flex-col justify-center">
+      <p class="stat-label">Cómo se calcula</p>
+      <p class="text-sm text-slate-400 leading-relaxed">
+        <span class="text-white font-medium">(paralelo − oficial) ÷ oficial × 100</span>
+      </p>
+      <p class="text-[11px] text-slate-600 mt-2 leading-relaxed">
+        Expresa en porcentaje cuánto se paga de más fuera del mercado regulado.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h2>Brecha por tipo de cambio</h2>
+      <div class="section-divider"></div>
+    </div>
+
+    @if (rows().length > 0) {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="table-divider">
+              <th class="th text-left">Tipo de cambio</th>
+              <th class="th text-right">Cotización</th>
+              <th class="th text-right">Brecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.slug) {
+              <tr class="table-row">
+                <td class="py-3">
+                  <a [routerLink]="['/', row.slug]" class="text-white font-medium hover:text-sky-400 transition-colors">
+                    {{ row.label }}
+                  </a>
+                </td>
+                <td class="py-3 text-right text-slate-400">${{ row.sell | number: "1.0-0" }}</td>
+                <td class="py-3 text-right">
+                  <span class="badge" [class]="row.gap >= 0 ? 'badge-loss' : 'badge-gain'">
+                    {{ row.gap | number: "1.1-1" }}%
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="animate-pulse space-y-3">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="skeleton h-8"></div>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="card">
+    <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+      <div>
+        <h2 class="font-display font-semibold text-white text-base">Evolución de la brecha</h2>
+        <p class="page-subtitle">Blue contra oficial, últimos 90 días</p>
+      </div>
+    </div>
+
+    @if (historyLoading()) {
+      <div class="animate-pulse space-y-3 pt-2" aria-hidden="true">
+        <div class="flex items-end gap-1 h-64">
+          @for (bar of [65, 72, 58, 80, 69, 75, 62, 78, 71, 84, 67, 73]; track $index) {
+            <div class="skeleton flex-1 rounded-sm" [style.height.%]="bar"></div>
+          }
+        </div>
+      </div>
+    } @else if (gapHistory().length > 0) {
+      <canvas baseChart [data]="chartData()" [options]="chartOptions()" type="line"></canvas>
+    } @else {
+      <div class="flex flex-col items-center justify-center py-16 text-slate-500">
+        <span class="text-3xl mb-3 opacity-40">📊</span>
+        <p class="text-sm">No hay datos disponibles</p>
+      </div>
+    }
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h2>Qué significa la brecha cambiaria</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div class="space-y-4 text-sm text-slate-400 leading-relaxed">
+      <p>
+        La brecha cambiaria es la diferencia porcentual entre un tipo de cambio paralelo y el dólar oficial. Es uno de
+        los indicadores más seguidos de la economía argentina porque resume, en un solo número, cuánta tensión hay entre
+        el precio regulado del dólar y el que surge del mercado libre.
+      </p>
+      <p>
+        Cuando la brecha se amplía, suele reflejar expectativas de devaluación: el mercado anticipa que el oficial va a
+        tener que acercarse al paralelo. Una brecha baja o cercana a cero indica lo contrario, un mercado cambiario más
+        equilibrado, donde el acceso al dólar oficial no está tan restringido.
+      </p>
+      <p>
+        No todos los tipos de cambio tienen la misma brecha. El CCL suele estar por encima del MEP porque incluye el
+        costo de girar los fondos al exterior, y el cripto puede despegarse del resto los fines de semana, cuando es el
+        único mercado abierto.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h2>Preguntas frecuentes</h2>
+      <div class="section-divider"></div>
+    </div>
+    <div>
+      <details class="faq-item">
+        <summary class="faq-question">¿Qué es la brecha cambiaria?</summary>
+        <p class="faq-answer">
+          Es la diferencia porcentual entre un tipo de cambio paralelo (como el dólar blue) y el dólar oficial. Se
+          calcula como (paralelo − oficial) / oficial × 100 e indica cuánto más caro está el dólar fuera del circuito
+          regulado.
+        </p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question">¿Por qué es importante la brecha cambiaria?</summary>
+        <p class="faq-answer">
+          Es uno de los indicadores más seguidos de la economía argentina. Una brecha amplia refleja tensión cambiaria y
+          expectativas de devaluación, mientras que una brecha baja sugiere mayor equilibrio entre la oferta y la
+          demanda de divisas.
+        </p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question">¿Cómo se calcula la brecha entre el blue y el oficial?</summary>
+        <p class="faq-answer">
+          Se resta el valor del dólar oficial al del blue, se divide por el oficial y se multiplica por cien. Por
+          ejemplo, si el blue está a $1.565 y el oficial a $1.510, la brecha es de aproximadamente 3,6%.
+        </p>
+      </details>
+    </div>
+  </section>
+</div>

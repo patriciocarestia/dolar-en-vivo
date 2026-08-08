@@ -9,6 +9,7 @@ import {
   effect,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
+import { RouterLink } from '@angular/router';
 import { AsyncPipe, DecimalPipe, DatePipe, isPlatformBrowser } from '@angular/common';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BaseChartDirective } from 'ng2-charts';
@@ -27,6 +28,7 @@ import { ExchangeRate, CryptoRate } from '../../store/rates/rates.model';
 import { ThemeService } from '../../core/services/theme.service';
 import { SeoService } from '../../core/services/seo.service';
 import { RatesService } from '../../core/services/rates.service';
+import { RATE_TYPES } from '../../core/data/rate-types.data';
 
 const RATE_LABELS: Record<string, string> = {
   oficial: 'Dólar Oficial',
@@ -56,10 +58,13 @@ const STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
 @Component({
   selector: 'app-dashboard',
-  imports: [AsyncPipe, DecimalPipe, DatePipe, RateCardComponent, BaseChartDirective],
+  imports: [AsyncPipe, DecimalPipe, DatePipe, RateCardComponent, BaseChartDirective, RouterLink],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  /** Drives the "guías" links, so the hub always points at every rate page. */
+  readonly rateTypes = RATE_TYPES;
+
   private readonly store = inject(Store);
   private readonly theme = inject(ThemeService);
   private readonly seo = inject(SeoService);
