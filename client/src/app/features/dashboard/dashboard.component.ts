@@ -1,13 +1,4 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  PLATFORM_ID,
-  inject,
-  signal,
-  computed,
-  effect,
-} from '@angular/core';
+import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, signal, computed } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RouterLink } from '@angular/router';
 import { AsyncPipe, DecimalPipe, DatePipe, isPlatformBrowser } from '@angular/common';
@@ -61,6 +52,36 @@ const STALE_THRESHOLD_MS = 5 * 60 * 1000;
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const SETTLE_DELAY_MS = 1500;
 const HYDRATION_GRACE_MS = 3000;
+
+// Deliberately free of live figures: search engines cache this content for
+// days, so a quoted rate would be served long after it stopped being true.
+const FAQ_ITEMS: readonly { question: string; answer: string }[] = [
+  {
+    question: '¿Qué es el dólar blue?',
+    answer:
+      'Es el precio del dólar en el mercado informal, fuera del circuito bancario oficial. Se lo llama también dólar paralelo o informal: son la misma cotización. Su valor en vivo aparece en las tarjetas de esta página.',
+  },
+  {
+    question: '¿En qué se diferencian el dólar oficial, el MEP y el CCL?',
+    answer:
+      'El oficial es el tipo de cambio regulado por el Banco Central. El MEP y el CCL surgen de comprar y vender bonos: el MEP deja los dólares en una cuenta local y el CCL los transfiere al exterior. Cada uno tiene su propia cotización, requisitos y costos.',
+  },
+  {
+    question: '¿Qué es la brecha cambiaria?',
+    answer:
+      'Es la diferencia porcentual entre una cotización paralela y el dólar oficial. Cuanto más alta, mayor es la distancia entre el precio regulado y el que rige en el mercado libre.',
+  },
+  {
+    question: '¿Qué es el dólar cripto?',
+    answer:
+      'Es el tipo de cambio que surge de comprar stablecoins como USDT o USDC con pesos. Opera las 24 horas, incluidos fines de semana y feriados, cuando el resto de los mercados está cerrado.',
+  },
+  {
+    question: '¿Cada cuánto se actualizan las cotizaciones en Dólar en Vivo?',
+    answer:
+      'Las cotizaciones del dólar y las criptomonedas se actualizan automáticamente cada pocos minutos, las 24 horas.',
+  },
+];
 
 @Component({
   selector: 'app-dashboard',
@@ -161,17 +182,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         .pipe(takeUntilDestroyed())
         .subscribe(() => this.store.dispatch(loadRates()));
     }
-
-    effect(() => {
-      const rates = this.exchangeRatesSig();
-      const cryptos = this.cryptoRatesSig();
-      if (rates.length === 0 && cryptos.length === 0) return;
-
-      this.seo.setJsonLd('faq', this.buildFaqSchema(this.faqItems(rates, cryptos)));
-    });
   }
 
   ngOnInit() {
+    this.seo.setJsonLd('faq', this.buildFaqSchema(FAQ_ITEMS));
     this.store.dispatch(loadRates());
     this.loadHistory();
   }
@@ -180,49 +194,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.seo.removeJsonLd('faq');
   }
 
-  faqItems(rates: ExchangeRate[], cryptos: CryptoRate[]): { question: string; answer: string }[] {
-    const blue = this.findRate(rates, 'blue');
-    const oficial = this.findRate(rates, 'oficial');
-    const btc = this.findCrypto(cryptos, 'BTC');
-    const gap = this.gapPercent(rates);
-    const items: { question: string; answer: string }[] = [];
-
-    if (blue) {
-      items.push({
-        question: '¿A cuánto está el dólar blue hoy?',
-        answer: `El dólar blue hoy cotiza a $${this.formatNumber(blue.buy)} para la compra y $${this.formatNumber(blue.sell)} para la venta.`,
-      });
-      items.push({
-        question: '¿El dólar blue es lo mismo que el dólar paralelo o informal?',
-        answer:
-          'Sí, dólar blue, dólar paralelo y dólar informal son la misma cotización: el precio del dólar fuera del circuito oficial.',
-      });
-    }
-    if (oficial) {
-      items.push({
-        question: '¿A cuánto está el dólar oficial hoy?',
-        answer: `El dólar oficial hoy cotiza a $${this.formatNumber(oficial.buy)} para la compra y $${this.formatNumber(oficial.sell)} para la venta.`,
-      });
-    }
-    if (gap !== null) {
-      items.push({
-        question: '¿Cuál es la brecha entre el dólar blue y el oficial?',
-        answer: `La brecha cambiaria entre el dólar blue y el dólar oficial es del ${Math.round(gap)}% en este momento.`,
-      });
-    }
-    if (btc) {
-      items.push({
-        question: '¿Cuánto vale el Bitcoin en pesos argentinos?',
-        answer: `1 Bitcoin equivale hoy a $${this.formatNumber(btc.priceArs)} pesos argentinos (USD ${this.formatNumber(btc.priceUsd)}).`,
-      });
-    }
-    items.push({
-      question: '¿Cada cuánto se actualizan las cotizaciones en Dólar en Vivo?',
-      answer:
-        'Las cotizaciones del dólar y las criptomonedas se actualizan automáticamente cada pocos minutos, las 24 horas.',
-    });
-
-    return items;
+  faqItems(): readonly { question: string; answer: string }[] {
+    return FAQ_ITEMS;
   }
 
   onRefresh() {
@@ -377,7 +350,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(n);
   }
 
-  private buildFaqSchema(items: { question: string; answer: string }[]) {
+  private buildFaqSchema(items: readonly { question: string; answer: string }[]) {
     return {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
