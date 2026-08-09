@@ -65,7 +65,6 @@ public class RateRepositoryTests : IDisposable
         {
             var today = DateTime.UtcNow.Date;
             this.context.ExchangeRates.AddRange(
-                // blue: two days of history, latest day is "today"
                 new ExchangeRate
                 {
                     Type = "blue",
@@ -80,9 +79,7 @@ public class RateRepositoryTests : IDisposable
                     Sell = 1100,
                     RecordedAt = today.AddHours(9),
                 },
-                // oficial: only has history up to yesterday (simulates a type that
-                // stopped updating), so its own "latest day" is yesterday and the
-                // previous-day cutoff should be the day before that.
+                // Stopped updating yesterday: its latest day differs from blue's.
                 new ExchangeRate
                 {
                     Type = "oficial",
@@ -184,10 +181,8 @@ public class RateRepositoryTests : IDisposable
 }
 
 /// <summary>
-/// A real (file-backed) SQLite database per test, so LINQ queries are verified
-/// against actual SQL translation instead of the in-memory provider, which
-/// silently accepts patterns (like GroupBy().Select(g => g.OrderBy...First()))
-/// that don't always translate the same way against a relational provider.
+/// File-backed SQLite per test, so queries are verified against real SQL
+/// translation rather than the in-memory provider's looser semantics.
 /// </summary>
 public sealed class SqliteConnectionFixture : IDisposable
 {

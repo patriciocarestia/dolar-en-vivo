@@ -2,11 +2,8 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
 import { RATE_TYPES } from './core/data/rate-types.data';
 import { CONVERSION_ROUTES } from './core/data/conversion.data';
 
-/**
- * Indexable pages are prerendered so crawlers get real HTML on the first
- * request. The authenticated sections stay client-rendered: their guard reads
- * localStorage, which doesn't exist at build time.
- */
+// Indexable pages are prerendered; authenticated ones stay client-rendered
+// because their guard reads localStorage, absent at build time.
 export const serverRoutes: ServerRoute[] = [
   {
     path: '',
@@ -49,9 +46,6 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Prerender,
   },
   {
-    // Portfolio and analysis are behind an auth guard that reads
-    // localStorage, which doesn't exist during prerendering — render
-    // them client-side only.
     path: '**',
     renderMode: RenderMode.Client,
   },

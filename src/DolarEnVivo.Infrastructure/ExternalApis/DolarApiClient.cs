@@ -1,22 +1,26 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DolarEnVivo.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace DolarEnVivo.Infrastructure.ExternalApis;
 
 public class DolarApiClient
 {
     private readonly HttpClient httpClient;
+    private readonly ILogger<DolarApiClient> logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
     };
 
-    public DolarApiClient(HttpClient httpClient)
+    public DolarApiClient(HttpClient httpClient, ILogger<DolarApiClient> logger)
     {
         ArgumentNullException.ThrowIfNull(httpClient, nameof(httpClient));
+        ArgumentNullException.ThrowIfNull(logger, nameof(logger));
         this.httpClient = httpClient;
+        this.logger = logger;
     }
 
     public async Task<IEnumerable<ExchangeRate>> FetchAllRatesAsync(
@@ -42,8 +46,9 @@ public class DolarApiClient
                 RecordedAt = DateTime.UtcNow,
             });
         }
-        catch
+        catch (Exception ex)
         {
+            this.logger.LogError(ex, "Failed to fetch current rates from DolarAPI.");
             return [];
         }
     }
@@ -91,8 +96,14 @@ public class DolarApiClient
                     };
                 });
         }
-        catch
+        catch (Exception ex)
         {
+            this.logger.LogError(
+                ex,
+                "Failed to fetch {Days}d history for {RateType} from ArgentinaDatos.",
+                days,
+                dbType
+            );
             return [];
         }
     }

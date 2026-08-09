@@ -46,7 +46,6 @@ export class ConvertComponent implements OnInit, OnDestroy {
   readonly heading = computed(() => conversionTitle(this.conversion()));
   readonly isUsdToArs = computed(() => this.conversion().direction === 'usd-to-ars');
 
-  /** The amount actually being converted — the URL's, unless the user typed one. */
   readonly activeAmount = computed(() => this.customAmount() ?? this.conversion().amount);
 
   readonly rows = computed<ConversionRow[]>(() => {
@@ -67,7 +66,6 @@ export class ConvertComponent implements OnInit, OnDestroy {
     }).filter((row): row is ConversionRow => row !== null);
   });
 
-  /** Blue is the reference most people mean when they ask this question. */
   readonly headlineRow = computed(
     () => this.rows().find((row) => row.slug === 'dolar-blue') ?? this.rows()[0],
   );
@@ -77,8 +75,6 @@ export class ConvertComponent implements OnInit, OnDestroy {
   readonly oppositeDirection = computed(() => {
     const row = this.headlineRow();
     if (!row) return null;
-    // Point at the closest listed amount in the reverse direction, so the pair
-    // of pages link to each other instead of dead-ending.
     const target = this.isUsdToArs() ? row.result : row.result;
     const candidates = CONVERSION_ROUTES.filter((c) => c.direction !== this.conversion().direction);
     return candidates.reduce((closest, candidate) =>

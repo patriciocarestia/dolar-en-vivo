@@ -28,8 +28,6 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(
       routes,
-      // Land at the top of each new page instead of inheriting the previous
-      // page's scroll offset, while still restoring position on back/forward.
       withInMemoryScrolling({
         scrollPositionRestoration: 'enabled',
         anchorScrolling: 'enabled',
@@ -43,9 +41,6 @@ export const appConfig: ApplicationConfig = {
       [analysisFeature.name]: analysisFeature.reducer,
     }),
     provideEffects([AuthEffects, RatesEffects, PortfolioEffects, AnalysisEffects]),
-    // Excluded from production builds entirely (not just muted) so the
-    // devtools instrumentation code doesn't ship in the bundle or run on
-    // every dispatched action for real visitors.
     ...(environment.production ? [] : [provideStoreDevtools({ maxAge: 25 })]),
     provideMarkdown(),
     provideClientHydration(withEventReplay(), withHttpTransferCacheOptions({})),

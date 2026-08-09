@@ -5,8 +5,7 @@ namespace DolarEnVivo.Infrastructure.Services;
 
 public class RatesFetcherService
 {
-    // The dashboard's longest history range is 90 days; anything older than that
-    // is never read, so we keep a small buffer past it and drop the rest.
+    // Buffer past the dashboard's longest range (90 days).
     private const int RetentionDays = 100;
 
     private readonly DolarApiClient dolarApiClient;

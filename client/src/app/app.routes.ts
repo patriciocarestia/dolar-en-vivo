@@ -2,17 +2,10 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { RATE_TYPES } from './core/data/rate-types.data';
 
-/**
- * One route per rate type, generated from the same content source the pages
- * render. Declaring them explicitly (rather than a root-level `:slug`) keeps
- * the root path free for the real sections below instead of swallowing them.
- */
 const rateDetailRoutes: Routes = RATE_TYPES.map((type) => ({
   path: type.slug,
   loadComponent: () =>
     import('./features/rate-detail/rate-detail.component').then((m) => m.RateDetailComponent),
-  // The slug travels in `data` rather than as a route param: these are static
-  // paths, so there is no param for the component to read.
   data: { dynamicSeo: true, title: type.metaTitle, slug: type.slug },
 }));
 

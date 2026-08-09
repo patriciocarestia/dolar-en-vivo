@@ -36,7 +36,6 @@ export class RateDetailComponent implements OnInit, OnDestroy {
 
   readonly rate = computed(() => this.ratesSig().find((r) => r.type === this.content().apiType));
 
-  /** The official rate is the reference every other type is compared against. */
   readonly oficial = computed(() => this.ratesSig().find((r) => r.type === 'oficial'));
 
   readonly gapWithOficial = computed(() => {

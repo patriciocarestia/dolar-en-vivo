@@ -1,22 +1,26 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DolarEnVivo.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace DolarEnVivo.Infrastructure.ExternalApis;
 
 public class CoinGeckoClient
 {
     private readonly HttpClient httpClient;
+    private readonly ILogger<CoinGeckoClient> logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
     };
 
-    public CoinGeckoClient(HttpClient httpClient)
+    public CoinGeckoClient(HttpClient httpClient, ILogger<CoinGeckoClient> logger)
     {
         ArgumentNullException.ThrowIfNull(httpClient, nameof(httpClient));
+        ArgumentNullException.ThrowIfNull(logger, nameof(logger));
         this.httpClient = httpClient;
+        this.logger = logger;
     }
 
     public async Task<IEnumerable<CryptoRate>> FetchRatesAsync(
@@ -68,8 +72,9 @@ public class CoinGeckoClient
 
             return rates;
         }
-        catch
+        catch (Exception ex)
         {
+            this.logger.LogError(ex, "Failed to fetch current crypto prices from CoinGecko.");
             return [];
         }
     }
@@ -115,8 +120,13 @@ public class CoinGeckoClient
                 };
             });
         }
-        catch
+        catch (Exception ex)
         {
+            this.logger.LogError(
+                ex,
+                "Failed to fetch {Symbol} market chart from CoinGecko.",
+                symbol
+            );
             return [];
         }
     }

@@ -38,13 +38,10 @@ export class HistoricoComponent implements OnInit {
   readonly loading = signal(true);
   private readonly history = signal<ExchangeRate[]>([]);
 
-  /** Oldest-first, deduplicated to one entry per calendar day. */
   private readonly dailySeries = computed(() => {
     const byDay = new Map<string, ExchangeRate>();
     for (const rate of this.history()) {
       const key = new Date(rate.recordedAt).toISOString().slice(0, 10);
-      // Later records for the same day overwrite earlier ones, leaving the
-      // most recent value as that day's close.
       byDay.set(key, rate);
     }
     return [...byDay.entries()]
@@ -80,7 +77,6 @@ export class HistoricoComponent implements OnInit {
       });
   });
 
-  /** Most recent days, newest first — the "cotización día por día" table. */
   readonly recentDays = computed<DayRow[]>(() =>
     [...this.dailySeries()]
       .reverse()

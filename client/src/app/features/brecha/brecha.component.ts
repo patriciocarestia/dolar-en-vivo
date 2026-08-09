@@ -172,8 +172,7 @@ export class BrechaComponent implements OnInit, OnDestroy {
       oficial: this.ratesService.getHistory('oficial', 90),
     }).subscribe({
       next: ({ blue, oficial }) => {
-        // Index the official rate by day so each blue point is compared against
-        // the official value of that same day rather than today's.
+        // Compare each blue point against the same day's official rate.
         const oficialByDay = new Map<string, number>();
         for (const rate of oficial) {
           oficialByDay.set(this.dayKey(rate.recordedAt), rate.sell);

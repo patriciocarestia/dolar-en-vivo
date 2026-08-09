@@ -1,39 +1,23 @@
-/**
- * Editorial content for the per-rate landing pages. The dashboard only shows
- * the number, so none of this prose is duplicated there.
- */
-
 export interface RateFaq {
   question: string;
   answer: string;
 }
 
 export interface RateTypeContent {
-  /** URL segment, e.g. "dolar-mep" → /dolar-mep */
   slug: string;
-  /** Key used by the rates API and the store. */
   apiType: string;
   label: string;
   shortLabel: string;
-  /** Label in running prose. Kept explicit so acronyms stay uppercase. */
   lowerLabel: string;
-  /** Sub-heading under the page title. */
   tagline: string;
   metaTitle: string;
   metaDescription: string;
-  /** Opening paragraphs: what this rate is. */
   intro: string[];
-  /** "Cómo comprarlo" steps. */
   howToBuy: { title: string; steps: string[] } | null;
-  /** Legal status / limits, the question everyone actually has. */
   legal: string;
-  /** Tax treatment, where it applies. */
   taxes: string | null;
-  /** Who typically uses this rate and why. */
   audience: string;
-  /** Page-specific FAQs, surfaced as FAQPage schema. */
   faqs: RateFaq[];
-  /** Other slugs worth linking to from this page. */
   related: string[];
   chartColor: string;
 }

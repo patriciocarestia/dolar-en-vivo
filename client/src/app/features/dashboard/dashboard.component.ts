@@ -57,9 +57,10 @@ const CRYPTO_LABELS: Record<string, string> = {
 
 const VIEW_MODE_KEY = 'dolarenvivo-view-mode';
 
-// How old the prerendered/transfer-cached snapshot can be before we hide it
-// behind the skeleton and wait for a real fetch, instead of showing stale numbers.
 const STALE_THRESHOLD_MS = 5 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const SETTLE_DELAY_MS = 1500;
+const HYDRATION_GRACE_MS = 3000;
 
 @Component({
   selector: 'app-dashboard',
@@ -67,7 +68,6 @@ const STALE_THRESHOLD_MS = 5 * 60 * 1000;
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  /** Drives the "guías" links, so the hub always points at every rate page. */
   readonly rateTypes = RATE_TYPES;
 
   private readonly store = inject(Store);
@@ -81,11 +81,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly loading$ = this.store.select(selectRatesLoading);
   readonly lastFetched$ = this.store.select(selectLastFetched);
 
-  // Single source of truth for the freshness gate: every template block that
-  // needs to know "do we have live-enough data" reads these same signals
-  // instead of subscribing to the store selectors independently, which could
-  // leave sibling @if blocks evaluating the same check to different values
-  // within the same render.
   private readonly exchangeRatesSig = toSignal(this.exchangeRates$, {
     initialValue: [] as ExchangeRate[],
   });
@@ -96,16 +91,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly cryptos = this.cryptoRatesSig;
   readonly lastFetched = toSignal(this.lastFetched$, { initialValue: null as string | null });
 
-  // The client bootstraps with an empty store — even though the server had
-  // real data at prerender time, the client's own toSignal()s start at their
-  // initialValue (empty array / null) until ngOnInit's loadRates() actually
-  // round-trips to the API (roughly 1s in practice). If we gate the hero
-  // section on that data being present, it briefly reads as "not fresh" the
-  // instant hydration finishes, so Angular hides the just-hydrated real
-  // cards and shows the skeleton at the same time it's still tearing them
-  // down. `settled` stays false long enough to cover that real fetch, so we
-  // keep trusting the server's version until the client has actually caught
-  // up, instead of judging it against data we know isn't loaded yet.
+  // Trust the prerendered values until the client's first fetch resolves;
+  // judging freshness against the still-empty store would flash the skeleton
+  // over cards that just hydrated.
   private readonly settled = signal(false);
   readonly fresh = computed(() => !this.settled() || this.isFresh(this.lastFetched()));
 
@@ -165,18 +153,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor() {
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
-      // 1.5s comfortably covers the real round-trip ngOnInit's loadRates()
-      // needs to resolve (~1s in practice), so `settled` only flips once the
-      // client has actually had a chance to catch up with the server.
-      timer(1500)
+      timer(SETTLE_DELAY_MS)
         .pipe(takeUntilDestroyed())
         .subscribe(() => this.settled.set(true));
 
-      // Short initial delay lets hydration settle (and the transfer-cached
-      // first response render) before forcing a real network refresh, so the
-      // build-time snapshot self-corrects within seconds instead of waiting
-      // a full 5 minutes for the first live fetch.
-      timer(3000, 5 * 60 * 1000)
+      timer(HYDRATION_GRACE_MS, REFRESH_INTERVAL_MS)
         .pipe(takeUntilDestroyed())
         .subscribe(() => this.store.dispatch(loadRates()));
     }
@@ -184,11 +165,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     effect(() => {
       const rates = this.exchangeRatesSig();
       const cryptos = this.cryptoRatesSig();
-      const items = this.faqItems(rates, cryptos);
-      // More than the one static item means real rate data has arrived.
-      if (items.length > 1) {
-        this.seo.setJsonLd('faq', this.buildFaqSchema(items));
-      }
+      if (rates.length === 0 && cryptos.length === 0) return;
+
+      this.seo.setJsonLd('faq', this.buildFaqSchema(this.faqItems(rates, cryptos)));
     });
   }
 

@@ -22,22 +22,17 @@ export class PlazoFijoCalculatorComponent implements OnInit, OnDestroy {
   readonly tna = signal(35);
   readonly termDays = signal(30);
 
-  /** Blue history, newest last, used as the "what if you'd bought dollars" leg. */
   private readonly history = signal<ExchangeRate[]>([]);
   readonly historyLoading = signal(true);
 
-  /** Interest earned over the term, simple interest as banks quote it. */
   readonly plazoFijoInterest = computed(
     () => this.amount() * (this.tna() / 100) * (this.termDays() / 365),
   );
 
   readonly plazoFijoFinal = computed(() => this.amount() + this.plazoFijoInterest());
 
-  /**
-   * The same term measured against what the dollar actually did: we look back
-   * `termDays` in the real blue series rather than projecting a rate forward,
-   * so the comparison is grounded in observed data instead of a guess.
-   */
+  // Looks back `termDays` in the real blue series rather than projecting a
+  // rate forward, so the comparison rests on observed data.
   private readonly dollarWindow = computed(() => {
     const sorted = [...this.history()].sort(
       (a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime(),
@@ -47,8 +42,6 @@ export class PlazoFijoCalculatorComponent implements OnInit, OnDestroy {
     const latest = sorted[sorted.length - 1];
     const cutoff = new Date(latest.recordedAt).getTime() - this.termDays() * 24 * 60 * 60 * 1000;
 
-    // First point at or after the cutoff — the closest we have to "the rate
-    // this many days ago".
     const start = sorted.find((r) => new Date(r.recordedAt).getTime() >= cutoff) ?? sorted[0];
     if (!start.sell || start === latest) return null;
 
@@ -61,7 +54,6 @@ export class PlazoFijoCalculatorComponent implements OnInit, OnDestroy {
     return ((window.end - window.start) / window.start) * 100;
   });
 
-  /** What the same pesos would be worth today if converted to dollars at the start. */
   readonly dollarFinal = computed(() => {
     const window = this.dollarWindow();
     if (!window) return null;
@@ -85,7 +77,6 @@ export class PlazoFijoCalculatorComponent implements OnInit, OnDestroy {
     return Math.abs(this.plazoFijoFinal() - dollar);
   });
 
-  /** Annualised dollar move, so it can be read next to the TNA on equal terms. */
   readonly dollarAnnualised = computed(() => {
     const change = this.dollarChangePercent();
     if (change === null) return null;

@@ -26,7 +26,6 @@ const DEFAULT_DESCRIPTION = 'Cotización del dólar y criptomonedas en Argentina
   templateUrl: './app.component.html',
 })
 export class AppComponent implements OnInit {
-  /** Keeps every guide one hop from any page a crawler lands on. */
   readonly footerLinks = [
     ...RATE_TYPES.map((type) => ({ path: `/${type.slug}`, label: type.label })),
     { path: '/brecha-cambiaria', label: 'Brecha cambiaria' },
@@ -72,8 +71,7 @@ export class AppComponent implements OnInit {
     const snapshot = this.deepestActivatedRoute().snapshot;
     const title = (snapshot.data['title'] as string) ?? DEFAULT_TITLE;
 
-    // Routes whose metadata depends on their params publish it themselves;
-    // writing the generic fallback here would clobber the specific one.
+    // Param-driven routes publish their own metadata; skip the fallback.
     if (!snapshot.data['dynamicSeo']) {
       this.seo.update({
         title,
@@ -98,11 +96,8 @@ export class AppComponent implements OnInit {
     this.scrollTo(target);
   }
 
-  /**
-   * Retries while the page is still short: routed pages render their tables and
-   * charts once their request resolves, so an immediate scroll to a deep offset
-   * would be clamped to the current height and land in the wrong place.
-   */
+  // Retries while the page is short: scrolling before the content renders
+  // clamps the offset to the current height.
   private scrollTo(target: number, attempt = 0): void {
     this.viewportScroller.scrollToPosition([0, target]);
 

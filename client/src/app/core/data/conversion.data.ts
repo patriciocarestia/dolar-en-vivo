@@ -1,8 +1,5 @@
-/**
- * Amounts that get their own conversion page. Kept finite on purpose:
- * arbitrary amounts would open an unbounded URL space of near-identical
- * pages, so anything outside these lists uses the interactive converter.
- */
+// Finite on purpose: arbitrary amounts would open an unbounded URL space of
+// near-identical pages. Anything outside these lists uses the live converter.
 
 export type ConversionDirection = 'usd-to-ars' | 'ars-to-usd';
 
@@ -34,7 +31,6 @@ export function conversionBySlug(slug: string): ConversionRoute | undefined {
   return CONVERSION_BY_SLUG.get(slug);
 }
 
-/** Neighbouring amounts in the same direction, for internal linking. */
 export function relatedConversions(route: ConversionRoute, limit = 6): ConversionRoute[] {
   const sameDirection = CONVERSION_ROUTES.filter(
     (c) => c.direction === route.direction && c.slug !== route.slug,
