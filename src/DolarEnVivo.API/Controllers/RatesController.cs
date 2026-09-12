@@ -1,5 +1,6 @@
 using DolarEnVivo.API.Controllers.Base;
 using DolarEnVivo.Application.DTOs;
+using DolarEnVivo.Application.Interfaces;
 using DolarEnVivo.Application.UseCases.Rates.Queries.GetCryptoHistory;
 using DolarEnVivo.Application.UseCases.Rates.Queries.GetLatestRates;
 using DolarEnVivo.Application.UseCases.Rates.Queries.GetRateHistory;
@@ -13,6 +14,8 @@ namespace DolarEnVivo.API.Controllers;
 /// </summary>
 public class RatesController : BaseController
 {
+    private static readonly TimeSpan MaxRateAge = TimeSpan.FromMinutes(15);
+
     public RatesController(IMediator mediator)
         : base(mediator) { }
 
@@ -24,6 +27,18 @@ public class RatesController : BaseController
     [ProducesResponseType(typeof(LatestRatesResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetLatestAsync(CancellationToken cancellationToken) =>
         Ok(await this.Mediator.Send(new GetLatestRatesQuery(), cancellationToken));
+
+    /// <summary>
+    /// Refreshes the stored rates when they have gone stale. Safe to call from an external
+    /// scheduler as often as you like: it is a no-op while the data is current, and
+    /// concurrent callers collapse into a single upstream fetch.
+    /// </summary>
+    [HttpPost("refresh")]
+    [ProducesResponseType(typeof(RateRefreshResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> RefreshAsync(
+        [FromServices] IRateRefreshService refreshService,
+        CancellationToken cancellationToken
+    ) => Ok(await refreshService.EnsureFreshAsync(MaxRateAge, cancellationToken));
 
     /// <summary>
     /// Gets historical exchange rate data

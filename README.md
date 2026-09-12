@@ -124,8 +124,9 @@ cd client && npm test           # frontend
 │ SQLite Database                 │
 └─────────────────────────────────┘
          ▲
-  Hangfire (every 15 min)
-  fetches & stores rates
+  Hangfire (every 15 min) ─┐
+  GitHub Actions cron ─────┼─→ fetch & store rates
+  Any read of stale data ──┘
 ```
 
 ---
@@ -138,11 +139,47 @@ cd client && npm test           # frontend
 | POST   | `/api/auth/login`                      | 🔓   | Get JWT token                   |
 | GET    | `/api/rates/latest`                    | 🔓   | Current exchange + crypto rates |
 | GET    | `/api/rates/history?type=blue&days=30` | 🔓   | Historical rate data            |
+| POST   | `/api/rates/refresh`                   | 🔓   | Refresh rates if they are stale |
+| GET    | `/api/health`                          | 🔓   | Status plus the age of the data |
 | GET    | `/api/portfolio`                       | ✅   | User's positions                |
 | POST   | `/api/portfolio`                       | ✅   | Add position                    |
 | PUT    | `/api/portfolio/{id}`                  | ✅   | Update position                 |
 | DELETE | `/api/portfolio/{id}`                  | ✅   | Delete position                 |
 | POST   | `/api/analysis`                        | ✅   | Trigger AI analysis             |
+
+---
+
+## Keeping the rates fresh
+
+The API runs on an App Service free tier, which has no Always On: the host unloads the
+process between visitors. An in-process scheduler only fires while the app happens to be
+running, so a 15-minute cron can go weeks without a single tick — the site keeps answering
+instantly, just with old numbers.
+
+Freshness therefore does not depend on the scheduler. Three paths converge on the same
+guarded fetch, and any one of them is enough:
+
+- **Reads.** Serving `/api/rates/latest` is proof the app is awake, so a read whose newest
+  record is over 15 minutes old refreshes before answering.
+- **An external cron.** The `API Warmup` workflow wakes the app, calls
+  `/api/rates/refresh`, and fails the run when `/api/health` still reports `stale`, so a
+  silent outage shows up as a failed workflow instead of going unnoticed.
+- **Hangfire**, unchanged, for whenever the app does stay warm.
+
+All three collapse into one upstream call: refreshing is a no-op while the data is
+current, concurrent callers wait on a single gate, and a failed attempt backs off for two
+minutes rather than hammering a provider that is down. `/api/health` reports
+`latestRateAt`, `ageMinutes` and `stale`, so the age of the data is visible from outside.
+
+On Azure, point both SQLite files at `/home/data`, which survives deployments and
+restarts, via these app settings:
+
+```
+ConnectionStrings__DefaultConnection = Data Source=/home/data/dolarenvivo.db
+ConnectionStrings__HangfireConnection = /home/data/hangfire.db
+```
+
+Note that Hangfire's SQLite storage takes a **file path**, not a connection string.
 
 ---
 

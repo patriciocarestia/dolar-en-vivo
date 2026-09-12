@@ -19,8 +19,12 @@ public record RateResponse
             Buy = entity.Buy,
             Sell = entity.Sell,
             ChangePercent = changePercent,
-            RecordedAt = entity.RecordedAt,
+            RecordedAt = AsUtc(entity.RecordedAt),
         };
+
+    // SQLite hands timestamps back with an unspecified kind, which serializes without a
+    // zone and leaves browsers reading UTC values as local time.
+    internal static DateTime AsUtc(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
 }
 
 public record CryptoRateResponse
@@ -40,7 +44,7 @@ public record CryptoRateResponse
             PriceUsd = entity.PriceUsd,
             PriceArs = entity.PriceArs,
             ChangePercent = changePercent,
-            RecordedAt = entity.RecordedAt,
+            RecordedAt = RateResponse.AsUtc(entity.RecordedAt),
         };
 }
 

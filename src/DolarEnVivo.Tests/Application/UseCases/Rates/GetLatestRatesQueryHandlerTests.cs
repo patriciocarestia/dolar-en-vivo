@@ -10,13 +10,22 @@ public class GetLatestRatesQueryHandlerTests
 {
     private static IMemoryCache CreateCache() => new MemoryCache(new MemoryCacheOptions());
 
+    private static IRateRefreshService CreateRefreshService()
+    {
+        var refreshService = Mock.Of<IRateRefreshService>();
+        Mock.Get(refreshService)
+            .Setup(r => r.EnsureFreshAsync(It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RateRefreshResult { Reason = "fresh" });
+        return refreshService;
+    }
+
     public class The_Constructor : GetLatestRatesQueryHandlerTests
     {
         [Fact]
         public void Should_throw_ArgumentNullException_when_rateRepository_is_null()
         {
             Assert.Throws<ArgumentNullException>(() =>
-                new GetLatestRatesQueryHandler(null!, CreateCache())
+                new GetLatestRatesQueryHandler(null!, CreateCache(), CreateRefreshService())
             );
         }
     }
@@ -66,7 +75,11 @@ public class GetLatestRatesQueryHandlerTests
                 .Setup(r => r.GetLatestCryptoRatesAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(cryptoRates);
 
-            var sut = new GetLatestRatesQueryHandler(repository, CreateCache());
+            var sut = new GetLatestRatesQueryHandler(
+                repository,
+                CreateCache(),
+                CreateRefreshService()
+            );
 
             var result = await sut.Handle(new GetLatestRatesQuery(), CancellationToken.None);
 
@@ -88,7 +101,11 @@ public class GetLatestRatesQueryHandlerTests
                 .Setup(r => r.GetLatestCryptoRatesAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync([]);
 
-            var sut = new GetLatestRatesQueryHandler(repository, CreateCache());
+            var sut = new GetLatestRatesQueryHandler(
+                repository,
+                CreateCache(),
+                CreateRefreshService()
+            );
 
             var result = await sut.Handle(new GetLatestRatesQuery(), CancellationToken.None);
 

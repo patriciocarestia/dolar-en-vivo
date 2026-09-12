@@ -21,11 +21,14 @@ public static class DependencyInjection
             options.UseSqlite(configuration.GetConnectionString("DefaultConnection"))
         );
 
+        services.AddMemoryCache();
+
         services.AddScoped<IPositionRepository, PositionRepository>();
         services.AddScoped<IRateRepository, RateRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<RatesFetcherService>();
+        services.AddScoped<IRateRefreshService>(sp => sp.GetRequiredService<RatesFetcherService>());
         services.AddScoped<HistoricalDataSeeder>();
 
         services.AddHttpClient<DolarApiClient>();

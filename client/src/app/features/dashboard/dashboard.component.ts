@@ -14,6 +14,7 @@ import {
   selectRatesHistory,
   selectRatesLoading,
   selectLastFetched,
+  selectRatesRecordedAt,
 } from '../../store/rates/rates.selectors';
 import { ExchangeRate, CryptoRate } from '../../store/rates/rates.model';
 import { ThemeService } from '../../core/services/theme.service';
@@ -49,6 +50,10 @@ const CRYPTO_LABELS: Record<string, string> = {
 const VIEW_MODE_KEY = 'dolarenvivo-view-mode';
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000;
+
+// Rates refresh every 15 minutes, so anything past 30 means a cycle was missed rather
+// than merely being between updates. Matches the API's own staleness threshold.
+const STALE_DATA_THRESHOLD_MS = 30 * 60 * 1000;
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const SETTLE_DELAY_MS = 1500;
 const HYDRATION_GRACE_MS = 3000;
@@ -111,12 +116,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly rates = this.exchangeRatesSig;
   readonly cryptos = this.cryptoRatesSig;
   readonly lastFetched = toSignal(this.lastFetched$, { initialValue: null as string | null });
+  readonly dataRecordedAt = toSignal(this.store.select(selectRatesRecordedAt), {
+    initialValue: null as string | null,
+  });
 
   // Trust the prerendered values until the client's first fetch resolves;
   // judging freshness against the still-empty store would flash the skeleton
   // over cards that just hydrated.
   private readonly settled = signal(false);
   readonly fresh = computed(() => !this.settled() || this.isFresh(this.lastFetched()));
+
+  // Say so rather than presenting month-old figures as live. Gated on `settled` so the
+  // prerendered values do not flash a warning before the client's first fetch lands.
+  readonly dataStale = computed(() => {
+    const recordedAt = this.dataRecordedAt();
+    if (!recordedAt || !this.settled()) return false;
+    return Date.now() - new Date(recordedAt).getTime() > STALE_DATA_THRESHOLD_MS;
+  });
 
   readonly dayOptions = [7, 30, 90];
   readonly selectedDays = signal(30);

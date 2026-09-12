@@ -1,6 +1,7 @@
 using System.Text;
 using DolarEnVivo.API.Middleware;
 using DolarEnVivo.Application;
+using DolarEnVivo.Application.Interfaces;
 using DolarEnVivo.Infrastructure;
 using DolarEnVivo.Infrastructure.Data;
 using DolarEnVivo.Infrastructure.Services;
@@ -112,10 +113,28 @@ builder.Services.AddCors(options =>
     );
 });
 
-var hangfireConnectionString =
-    builder.Configuration.GetConnectionString("HangfireConnection") ?? "Data Source=hangfire.db";
+// Hangfire.Storage.SQLite takes a file path, not a connection string: handed
+// "Data Source=hangfire.db" it creates a file with that literal name. Point this at a
+// directory the host keeps across deployments so the scheduler does not lose its state.
+var hangfireDatabasePath = ResolveSqliteFilePath(
+    builder.Configuration.GetConnectionString("HangfireConnection") ?? "hangfire.db"
+);
 
-builder.Services.AddHangfire(config => config.UseSQLiteStorage(hangfireConnectionString));
+var hangfireDirectory = Path.GetDirectoryName(Path.GetFullPath(hangfireDatabasePath));
+if (!string.IsNullOrEmpty(hangfireDirectory))
+    Directory.CreateDirectory(hangfireDirectory);
+
+builder.Services.AddHangfire(config => config.UseSQLiteStorage(hangfireDatabasePath));
+
+static string ResolveSqliteFilePath(string connectionStringOrPath)
+{
+    const string dataSourcePrefix = "Data Source=";
+    var value = connectionStringOrPath.Trim();
+
+    return value.StartsWith(dataSourcePrefix, StringComparison.OrdinalIgnoreCase)
+        ? value[dataSourcePrefix.Length..].Trim()
+        : value;
+}
 
 builder.Services.AddHangfireServer();
 
@@ -160,6 +179,30 @@ RecurringJob.AddOrUpdate<RatesFetcherService>(
     "0 3 * * *"
 );
 
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+// Reports how old the stored rates are, not just whether the process answers. A page
+// serving month-old figures used to look identical to a healthy one from the outside.
+const double StaleAfterMinutes = 30;
+
+app.MapGet(
+        "/api/health",
+        async (IRateRepository rates, CancellationToken cancellationToken) =>
+        {
+            var latest = await rates.GetLatestRateTimestampAsync(cancellationToken);
+            var ageMinutes = latest is null
+                ? (double?)null
+                : Math.Round((DateTime.UtcNow - latest.Value).TotalMinutes, 1);
+
+            return Results.Ok(
+                new
+                {
+                    status = "ok",
+                    latestRateAt = latest,
+                    ageMinutes,
+                    stale = ageMinutes is null || ageMinutes > StaleAfterMinutes,
+                }
+            );
+        }
+    )
+    .AllowAnonymous();
 
 app.Run();

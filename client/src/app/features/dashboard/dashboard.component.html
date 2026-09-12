@@ -3,15 +3,22 @@
     <div>
       <h1 class="page-title">Cotizaciones en Argentina</h1>
       <p class="page-subtitle flex items-center gap-1.5">
-        @if (!(loading$ | async)) {
+        @if (!(loading$ | async) && !dataStale()) {
           <span class="live-dot"></span>
         }
-        @if (lastFetched(); as ts) {
+        @if (dataRecordedAt(); as ts) {
           Actualizado a las {{ ts | date: "HH:mm" }}
         } @else {
           Dólar blue, oficial y criptomonedas hoy, en vivo
         }
       </p>
+      @if (dataRecordedAt(); as ts) {
+        @if (dataStale()) {
+          <p class="stale-notice" role="status">
+            Las cotizaciones no se actualizan desde el {{ ts | date: "d/MM 'a las' HH:mm" }}. Estamos reintentando.
+          </p>
+        }
+      }
     </div>
     <div class="flex items-center gap-2 shrink-0">
       <button

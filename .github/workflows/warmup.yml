@@ -1,12 +1,31 @@
 name: API Warmup
 
+# Keeps the API awake and its rates current. The in-process scheduler only fires while
+# the app happens to be running, and the host is free to unload it between visitors,
+# so freshness cannot depend on that job alone.
 on:
   schedule:
     - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+env:
+  API: https://finsight-ai-api.azurewebsites.net
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping health endpoint
-        run: curl -sf https://finsight-ai-api.azurewebsites.net/api/health || echo "Warmup ping failed"
+      - name: Wake the API
+        run: curl -sf --max-time 120 --retry 3 --retry-all-errors "$API/api/health" > /dev/null
+
+      - name: Refresh rates if stale
+        run: curl -sf --max-time 120 -X POST "$API/api/rates/refresh"
+
+      - name: Fail if the rates are still stale
+        run: |
+          health=$(curl -sf --max-time 60 "$API/api/health")
+          echo "$health"
+          if [ "$(echo "$health" | jq -r '.stale')" = "true" ]; then
+            echo "::error::Rates are stale ($(echo "$health" | jq -r '.ageMinutes') minutes old)."
+            exit 1
+          fi

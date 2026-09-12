@@ -36,6 +36,15 @@ public class RateRepository : IRateRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<DateTime?> GetLatestRateTimestampAsync(CancellationToken cancellationToken)
+    {
+        var latest = await this
+            .context.ExchangeRates.Where(r => ExchangeRateTypes.Contains(r.Type))
+            .MaxAsync(r => (DateTime?)r.RecordedAt, cancellationToken);
+
+        return latest is null ? null : DateTime.SpecifyKind(latest.Value, DateTimeKind.Utc);
+    }
+
     public async Task<IEnumerable<ExchangeRate>> GetPreviousDayRatesAsync(
         CancellationToken cancellationToken
     )

@@ -5,6 +5,12 @@ namespace DolarEnVivo.Application.Interfaces;
 public interface IRateRepository
 {
     Task<IEnumerable<ExchangeRate>> GetLatestRatesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Timestamp of the most recent exchange rate on record, or null when the table is empty.
+    /// Used to decide whether the stored data is stale enough to warrant a refresh.
+    /// </summary>
+    Task<DateTime?> GetLatestRateTimestampAsync(CancellationToken cancellationToken);
     Task<IEnumerable<ExchangeRate>> GetPreviousDayRatesAsync(CancellationToken cancellationToken);
     Task<IEnumerable<ExchangeRate>> GetRateHistoryAsync(
         string type,

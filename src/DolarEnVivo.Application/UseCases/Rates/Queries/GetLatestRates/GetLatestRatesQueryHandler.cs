@@ -10,15 +10,24 @@ public class GetLatestRatesQueryHandler : IRequestHandler<GetLatestRatesQuery, L
     private const string CacheKey = "rates:latest";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromSeconds(60);
 
+    private static readonly TimeSpan MaxRateAge = TimeSpan.FromMinutes(15);
+
     private readonly IRateRepository rateRepository;
     private readonly IMemoryCache cache;
+    private readonly IRateRefreshService refreshService;
 
-    public GetLatestRatesQueryHandler(IRateRepository rateRepository, IMemoryCache cache)
+    public GetLatestRatesQueryHandler(
+        IRateRepository rateRepository,
+        IMemoryCache cache,
+        IRateRefreshService refreshService
+    )
     {
         ArgumentNullException.ThrowIfNull(rateRepository, nameof(rateRepository));
         ArgumentNullException.ThrowIfNull(cache, nameof(cache));
+        ArgumentNullException.ThrowIfNull(refreshService, nameof(refreshService));
         this.rateRepository = rateRepository;
         this.cache = cache;
+        this.refreshService = refreshService;
     }
 
     public async Task<LatestRatesResponse> Handle(
@@ -28,6 +37,11 @@ public class GetLatestRatesQueryHandler : IRequestHandler<GetLatestRatesQuery, L
     {
         if (this.cache.TryGetValue(CacheKey, out LatestRatesResponse? cached) && cached is not null)
             return cached;
+
+        // The background job only runs while the host keeps the app alive, which it does not
+        // guarantee. Serving a read is the one moment we know the app is running, so it is
+        // also the moment to top up anything that went stale meanwhile.
+        await this.refreshService.EnsureFreshAsync(MaxRateAge, cancellationToken);
 
         var response = await this.BuildResponseAsync(cancellationToken);
         this.cache.Set(CacheKey, response, CacheDuration);
