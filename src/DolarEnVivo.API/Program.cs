@@ -144,10 +144,25 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
-
-    var seeder = scope.ServiceProvider.GetRequiredService<HistoricalDataSeeder>();
-    await seeder.SeedAsync();
 }
+
+// Backfilling can take several upstream calls, and on a host that unloads the app the
+// first visitor already waits out the cold start, so it runs once the server is up.
+app.Lifetime.ApplicationStarted.Register(() =>
+    _ = Task.Run(async () =>
+    {
+        using var scope = app.Services.CreateScope();
+        try
+        {
+            var seeder = scope.ServiceProvider.GetRequiredService<HistoricalDataSeeder>();
+            await seeder.SeedAsync(app.Lifetime.ApplicationStopping);
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogError(ex, "Historical backfill failed; will retry on next startup.");
+        }
+    })
+);
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 

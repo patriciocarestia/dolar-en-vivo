@@ -64,8 +64,9 @@ cp appsettings.Development.example.json appsettings.Development.json
 dotnet run
 ```
 
-The database is created automatically on first run and the rate fetcher seeds
-historical data from DolarAPI, so the dashboard has data immediately. The AI
+The database is created automatically on first run, and a few seconds after startup
+the backfill loads 90 days of daily history from ArgentinaDatos and CoinGecko, so the
+charts have data right away. The AI
 analysis endpoint needs a [Gemini API key](https://aistudio.google.com/apikey)
 in `appsettings.Development.json`; every other feature works without one.
 
@@ -166,7 +167,12 @@ guarded fetch, and any one of them is enough:
   silent outage shows up as a failed workflow instead of going unnoticed.
 - **Hangfire**, unchanged, for whenever the app does stay warm.
 
-All three collapse into one upstream call: refreshing is a no-op while the data is
+Whole days can still go missing if nobody wakes the app for a day. Each startup
+backfills them in the background: it checks the 90-day chart window for days with no
+record and fills them with that day's close from ArgentinaDatos and CoinGecko. When
+nothing is missing it makes no upstream calls.
+
+All three refresh paths collapse into one upstream call: refreshing is a no-op while the data is
 current, concurrent callers wait on a single gate, and a failed attempt backs off for two
 minutes rather than hammering a provider that is down. `/api/health` reports
 `latestRateAt`, `ageMinutes` and `stale`, so the age of the data is visible from outside.
