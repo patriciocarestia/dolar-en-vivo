@@ -6,7 +6,6 @@ using DolarEnVivo.Infrastructure;
 using DolarEnVivo.Infrastructure.Data;
 using DolarEnVivo.Infrastructure.Services;
 using Hangfire;
-using Hangfire.Storage.SQLite;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -113,28 +112,11 @@ builder.Services.AddCors(options =>
     );
 });
 
-// Hangfire.Storage.SQLite takes a file path, not a connection string: handed
-// "Data Source=hangfire.db" it creates a file with that literal name. Point this at a
-// directory the host keeps across deployments so the scheduler does not lose its state.
-var hangfireDatabasePath = ResolveSqliteFilePath(
-    builder.Configuration.GetConnectionString("HangfireConnection") ?? "hangfire.db"
-);
-
-var hangfireDirectory = Path.GetDirectoryName(Path.GetFullPath(hangfireDatabasePath));
-if (!string.IsNullOrEmpty(hangfireDirectory))
-    Directory.CreateDirectory(hangfireDirectory);
-
-builder.Services.AddHangfire(config => config.UseSQLiteStorage(hangfireDatabasePath));
-
-static string ResolveSqliteFilePath(string connectionStringOrPath)
-{
-    const string dataSourcePrefix = "Data Source=";
-    var value = connectionStringOrPath.Trim();
-
-    return value.StartsWith(dataSourcePrefix, StringComparison.OrdinalIgnoreCase)
-        ? value[dataSourcePrefix.Length..].Trim()
-        : value;
-}
+// In-memory on purpose. Hangfire only holds the two recurring jobs, which are re-registered
+// on every startup, so there is nothing worth persisting. A SQLite file on App Service's
+// network-backed /home got corrupted, and the scheduler's constant writes to it crash-looped
+// the app until the free tier's restart quota shut the site down.
+builder.Services.AddHangfire(config => config.UseInMemoryStorage());
 
 builder.Services.AddHangfireServer();
 

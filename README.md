@@ -177,15 +177,17 @@ current, concurrent callers wait on a single gate, and a failed attempt backs of
 minutes rather than hammering a provider that is down. `/api/health` reports
 `latestRateAt`, `ageMinutes` and `stale`, so the age of the data is visible from outside.
 
-On Azure, point both SQLite files at `/home/data`, which survives deployments and
-restarts, via these app settings:
+On Azure, point the SQLite database at `/home/data`, which survives deployments and
+restarts, via this app setting:
 
 ```
 ConnectionStrings__DefaultConnection = Data Source=/home/data/dolarenvivo.db
-ConnectionStrings__HangfireConnection = /home/data/hangfire.db
 ```
 
-Note that Hangfire's SQLite storage takes a **file path**, not a connection string.
+Hangfire keeps its state in memory. Its only state is the two recurring jobs, which are
+re-registered on every startup. It used to keep that state in a SQLite file on `/home`, but
+on App Service that storage is network-backed: the file got corrupted, the app crash-looped,
+and the free tier's restart quota (15 worker stops per hour) took the site down.
 
 ---
 
